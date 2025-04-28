@@ -1,0 +1,71 @@
+{% extends 'base.html' %}
+{% load customfunction %}
+{% block container %}
+
+<div class="container my-5">
+    <div class="row g-4">
+        {% for item in book %}
+        <div class="col-sm-6 col-md-4 col-lg-3 d-flex align-items-stretch">
+            <div class="book-card shadow-sm text-center h-100" style="width: 250px; height: 80px; color: aliceblue;">
+                <div class="p-3">
+                    <img src="{{ item.coverpage.url }}" class="img-fluid rounded" alt="{{ item.name }}" style="height: 200px; object-fit: cover;">
+                </div>
+                <div class="card-body d-flex flex-column justify-content-between">
+                    <h5 class="card-title">
+                        <a href="{% url 'store:book' id=item.id %}" class="text-decoration-none" style="color:aliceblue;">
+                            {{ item.name }}
+                        </a>
+                    </h5>
+                    <p class="card-text" style="color:lavender">{{ item.writer }}</p>
+                    <p class="book-price">RM {{ item.price }}</p>
+                    <button class="btn btn-primary btn-sm mt-auto btn-add-cart" data-book-id="{{ item.id }}">
+                        <i class="fa fa-shopping-cart"></i> Add to cart
+                    </button>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+
+    {% if book|length > 0 %}
+    <div class="d-flex justify-content-center mt-4">
+        <nav aria-label="Page navigation">
+            <ul class="pagination">
+                {% if book.has_previous %}
+                <li class="page-item">
+                    <a class="page-link" href="?page=1">First</a>
+                </li>
+                <li class="page-item">
+                    <a class="page-link" href="?page={{ book.previous_page_number }}">Previous</a>
+                </li>
+                {% endif %}
+
+                {% for ord in book.paginator.page_range %}
+                    {% if book.number == ord %}
+                    <li class="page-item active">
+                        <span class="page-link">{{ ord }}</span>
+                    </li>
+                    {% elif ord > book.number|add:'-3' and ord < book.number|add:'3' %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ ord }}">{{ ord }}</a>
+                    </li>
+                    {% endif %}
+                {% endfor %}
+
+                {% if book.has_next %}
+                <li class="page-item">
+                    <a class="page-link" href="?page={{ book.next_page_number }}">Next</a>
+                </li>
+                <li class="page-item">
+                    <a class="page-link" href="?page={{ book.paginator.num_pages }}">Last</a>
+                </li>
+                {% endif %}
+            </ul>
+        </nav>
+    </div>
+    {% else %}
+    <h3 class="text-center mt-5">There are no books found.</h3>
+    {% endif %}
+</div>
+
+{% endblock %}

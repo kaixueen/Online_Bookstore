@@ -1,0 +1,66 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load crispy_forms_tags %}
+{% load customfunction %}
+
+{% block container %}
+<div class="container mt-4">
+    <!-- Book Title -->
+    <div class="row mb-4">
+        <div class="col-12 text-center">
+            <h2 class="fw-bold">{{ book.name }}</h2>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- Left: Book Image -->
+        <div class="col-md-4 text-center">
+            <div class="grid-item">
+                <div class="view-details" style="cursor:pointer">
+                    <img id="product_image" class="lookInsideImg img-fluid rounded shadow-sm" src="{{ book.coverpage.url }}" alt="{{ book.name }}">
+                </div>
+            </div>
+            <div class="lookInsideDiv" style="display: none; position: relative;">
+                <div class="exitBtn btn btn-sm btn-danger position-absolute top-0 end-0 m-2">X</div>
+                <div class="pagesArea mt-3">
+                    <ul class="list-unstyled pages">
+                        <li>
+                            <img src="{{ book.bookpage.url }}" class="img-fluid rounded" alt="Preview Page">
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <!-- Right: Book Details -->
+        <div class="col-md-8">
+            <div class="product-information p-3">
+				<span class="fw-semibold">{{ book.writer }}</span>
+				<h5 class="text-decoration-underline">{{ book.category }}</h5>
+                <article class="text-justify mb-3" style="line-height: 1.6;">
+                    {{ book.description }}
+                </article>
+                <div class="pricebox mb-3">
+                    <h4 class="text-danger">Price: RM {{ book.price }}</h4>
+                </div>
+                <button class="cart-btn btn-lg" id="addTocart" data-book-id="{{ book.id }}">
+                    <i class="fa fa-shopping-cart me-2"></i> Add to Cart
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script type="text/javascript">
+    $(document).on('ready', function() {
+        $(document).on('click', '.lookInsideImg', function() {
+            $('.lookInsideDiv').fadeIn(500);
+        });
+        $(document).on('click', '.exitBtn, div.overlay', function() {
+            $('.lookInsideDiv').fadeOut(500);
+        });
+    });
+</script>
+{% endblock %}

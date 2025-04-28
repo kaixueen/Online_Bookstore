@@ -1,0 +1,51 @@
+{% load static %}
+<div class="header-top">
+    <div class="container-fluid">
+        <div class="row align-items-center py-2">
+            <div class="col-md-3 d-flex align-items-center">
+                <a href="{% url 'store:index' %}" class="brand-logo text-decoration-none">
+                    <h3 class="m-0">Mantap Book Store</h3>
+                </a>
+            </div>
+            <div class="col-md-5">
+                <form action="{% url 'store:search' %}" method="GET">
+                    <div class="input-group search-box my-2">
+                        <input type="text" class="form-control" placeholder="Search Book..." name="q" value="{{ search }}">
+                        <button class="btn btn-primary" type="submit"><i class="fa fa-search"></i></button>
+                    </div>
+                </form>
+            </div>
+            <div class="col-md-4 d-flex justify-content-end align-items-center">
+                <ul class="navbar-nav flex-row gap-3">
+                    {% if request.user.is_authenticated %}
+                    <li class="nav-item dropdown position-relative">
+                        <a class="nav-link dropdown-toggle profile-name" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                            {{ request.user.username }}
+                        </a>
+                        <ul class="dropdown-menu">
+                            <li><a class="dropdown-item" href="{% url 'store:order_list' %}"><i class="fa fa-shopping-cart me-2"></i>My Orders</a></li>
+                            <li><a class="dropdown-item" href="{% url 'store:signout' %}"><i class="fa fa-sign-out me-2"></i>Sign Out</a></li>
+                        </ul>
+                    </li>
+                    <li class="nav-item cart">
+                        <a href="{% url 'store:cart_details' %}" class="nav-link">
+                            <i class="fa fa-shopping-cart"></i> 
+                            <span id="gettotalcart" class="badge bg-warning text-dark ms-1">{{ cart|length }}</span>
+                        </a>
+                    </li>
+                    {% else %}
+                    <li class="nav-item">
+                        <a class="nav-link" href="{% url 'store:signin' %}">Sign In</a>
+                    </li>
+                    <li class="nav-item cart">
+                        <a href="{% url 'store:cart_details' %}" class="nav-link">
+                            <i class="fa fa-shopping-cart"></i> 
+                            <span id="gettotalcart" class="badge bg-warning text-dark ms-1">{{ cart|length }}</span>
+                        </a>
+                    </li>
+                    {% endif %}
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>

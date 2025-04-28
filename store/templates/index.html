@@ -1,0 +1,72 @@
+
+{% extends 'base.html' %}
+{% load static %}
+{% load customfunction %}
+
+{% block headermenu %}
+{% endblock %}
+
+{% block container %}
+<div class="row">
+    <div class="col-sm-12">
+        <div class="slider-container">
+            <ul id="demo3" class="slide-images">
+                {% for sld in slide %}
+                <li><img src="{{ sld.slide_img.url }}" class="slide-img" style="width: 80%; height: 250px; object-fit: fill;"/></li>
+                {% endfor %}
+            </ul>
+        </div>
+    </div>
+
+    <div class="col-sm-12 section">
+        <div class="titleheader">
+            <h3 class="h2header text-center">New Published Book</h3>
+            <a href="{% url 'store:books' %}" class="see-all-link">See All</a>
+        </div>
+        <div class="row">
+            {% for item in newbooks %}
+            <div class="col-sm-6">
+                <div class="book-card">
+                    <div class="coverpage">
+                        <img src="{{ item.coverpage.url }}" class="book-img"/>
+                    </div>
+                    <div class="book-info">
+                        <a href="{% url 'store:book' id=item.id %}" class="book-title">{{ item.name|text_short }}</a>
+                        <span class="book-writer">{{ item.writer }}</span>
+                        <p class="book-price">RM {{ item.price }}</p>
+                        <button class="btn-add-cart" data-book-id="{{ item.id }}">
+                            <i class="fa fa-shopping-cart"></i> Add to cart
+                        </button>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+
+    <div class="col-sm-12 section">
+        <div class="titleheader">
+            <h3 class="h2header text-center">Top Selling Book</h3>
+        </div>
+        <div class="row">
+            {% for item in bestsellers %}
+            <div class="col-sm-6">
+                <div class="book-card">
+                    <div class="coverpage">
+                        <img src="{{ item.coverpage.url }}" class="book-img"/>
+                    </div>
+                    <div class="book-info">
+                        <a href="{% url 'store:book' id=item.id %}" class="book-title">{{ item.name|text_short }}</a>
+                        <span class="book-writer">{{ item.writer }}</span>
+                        <p class="book-price">RM {{ item.price }}</p>
+                        <button class="btn-add-cart" data-book-id="{{ item.id }}">
+                            <i class="fa fa-shopping-cart"></i> Add to cart
+                        </button>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+{% endblock %}

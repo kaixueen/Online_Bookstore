@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<title>Book Store Sign In</title>
+	{% load static %}
+	<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
+	<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.5/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-SgOJa3DmI69IUzQ2PVdRZhwQ+dy64/BUtbMJw1MZ8t5HZApcHrRKUc4W0kG879m7" crossorigin="anonymous">
+    <link rel="stylesheet" href="{% static 'css/style.css' %}">
+</head>
+<body class="login-body">
+	<div class="login-wrapper">
+		<div class="signup-form">
+			<div class="messages"></div>	
+			<h3>Create Account</h3>	
+			<form action="" method="POST" class="auth-validate-form">
+				{% csrf_token %}
+				{% for field in form %}
+				    <div class="form-group registration-form" >
+				        {{ field.label_tag }}
+				        {{ field }}
+
+				        {% if field.help_text %}
+				        <small class="form-text">{{ field.help_text }}</small>
+				        {% endif %}
+
+				        {% for error in field.errors %}
+				          <p style="color: red; font-size: 13px">{{ error }}</p>
+				        {% endfor %}
+				    </div>
+				{% endfor %}
+				<button class="btn btn-primary w-100 mt-3">Create your BookStore account</button>
+			</form>
+			<div class="a-divider-break mt-3"></div>
+			<div class="a-divider-inner text-center">
+				<p>
+				    Already have an account?
+				    <a class="a-link-emphasis" href="{% url 'store:signin' %}"><i class='fa fa-caret-right'></i> Sign in</a>
+				</p>
+			</div>
+		</div> 
+	</div>
+</body>
+</html>
