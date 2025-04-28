@@ -14,14 +14,12 @@ class Cart(object):
     def add(self, book):
         book_id = str(book.id)
         if book_id not in self.cart:
-            self.cart[book_id] = {'quantity': 0, 'price': str(book.price)}
-            self.cart[book_id]['quantity'] = 1
-        else:    
+            self.cart[book_id] = {'quantity': 1, 'price': str(book.price)}
+        else:
             if self.cart[book_id]['quantity'] < 10:
                 self.cart[book_id]['quantity'] += 1
-        print(f"Cart after adding {book.id}: {self.cart}")
         self.save()
-        print(f"Cart after adding {book.id}: {self.cart}")
+
 
     def update(self, book, quantity):
         book_id = str(book.id)
@@ -47,19 +45,22 @@ class Cart(object):
     def __iter__(self):
         book_ids = self.cart.keys()
         books = Book.objects.filter(id__in=book_ids)
-        for book in books:
-            self.cart[str(book.id)]['book'] = book
+        book_map = {str(book.id): book for book in books}
 
-        for item in self.cart.values():
-            item['price'] = Decimal(item['price'])
-            item['total_price'] = item['price'] * item['quantity']
-            yield item
+        for book_id, item in self.cart.items():
+            item_copy = item.copy()
+            item_copy['book'] = book_map.get(book_id)
+            item_copy['price'] = Decimal(item_copy['price'])
+            item_copy['total_price'] = item_copy['price'] * item_copy['quantity']
+            yield item_copy
+
 
     def __len__(self):
         return sum(item['quantity'] for item in self.cart.values())
 
     def get_total_price(self):
-        return sum(Decimal(item['price']) * item['quantity'] for item in self.cart.values())
+        return sum(item['total_price'] for item in self)
+
     
     def get_total_items(self):
         return sum(item['quantity'] for item in self.cart.values())
