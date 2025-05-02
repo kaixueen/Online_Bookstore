@@ -20,8 +20,10 @@ urlpatterns = [
 	path('add_to_cart/<int:bookid>', views.cart_add, name='cart_add'),
 	path('remove_from_cart/<int:bookid>', views.cart_remove, name='cart_remove'),
 	path('update_cart/<int:bookid>/<signed_int:quantity>', views.cart_update, name='cart_update'),
-    path('order_list', views.order_list, name="order_list"),
-	path('order/<int:id>', views.order_details, name="order_details"),
-	path('shipping/', views.order_create, name="order_create"),
+	path('order_create/', views.order_create, name='order_create'),
+    path('order_list/', views.order_list, name='order_list'),
+    path('order_details/<int:id>/', views.order_details, name='order_details'),
+    path('payment/', views.payment, name='payment'),
+    path('order_success/<int:order_id>/<int:payment_id>', views.order_success, name='order_success'),
 	path('pdf/<int:id>',views.pdf.as_view(), name="pdf"),
 ]

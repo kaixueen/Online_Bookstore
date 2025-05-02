@@ -3,6 +3,7 @@ from django.db import models
 # Create your models here.
 from django.db import models
 from django.contrib.auth.models import User
+from decimal import Decimal
 
 class CustomerProfile(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE)
@@ -39,20 +40,22 @@ class Slider(models.Model):
 
 class Order(models.Model):
     customer = models.ForeignKey(CustomerProfile, on_delete=models.CASCADE)
-    book = models.ForeignKey(Book, on_delete=models.CASCADE)
-    quantity = models.PositiveIntegerField(default=1)
+    books = models.JSONField(default=dict)
     created = models.DateTimeField(auto_now_add=True)
     updated = models.DateTimeField(auto_now=True)
     paid = models.BooleanField(default=False)
-
+    
     class Meta:
         ordering = ('-created',)
 
     def __str__(self):
-        return f'Order {self.id} - {self.book.name}'
+        return f'Order {self.id}'
 
     def get_cost(self):
-        return self.book.price * self.quantity
+        total_cost = 0
+        for book_id, details in self.books.items():
+            total_cost += Decimal(details.get('price', 0)) * details.get('quantity', 1)
+        return total_cost
 
 class Payment(models.Model):
     order = models.OneToOneField(Order, on_delete=models.CASCADE)

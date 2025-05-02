@@ -1,0 +1,80 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block container %}
+<div class="container mt-4">
+    <h3 class="mb-4 text-center">My Orders</h3>
+
+    <div class="table-responsive">
+        <table class="table table-bordered table-hover text-center">
+            <thead class="thead-dark">
+                <tr>
+                    <th>#</th>
+                    <th>Order ID</th>
+                    <th>Payment</th>
+                    <th>Quantity</th>
+                    <th>Status</th>
+                    <th>Date</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for order in orders %}
+                <tr>
+                    <td>{{ forloop.counter }}</td>
+                    <td>
+                        <a href="{% url 'store:order_details' id=order.order.id %}">{{ order.order.id }}</a>
+                    </td>
+                    <td>RM {{ order.order.get_cost|floatformat:2 }}</td>
+                    <td>{{order.quantity}}</td>
+                    <td>
+                        {% if order.order.paid %}
+                        <span>Confirmed</span>
+                        {% else %}
+                        <span>Processing</span>
+                        {% endif %}
+                    </td>
+                    <td>{{ order.order.created|date:"Y-m-d H:i" }}</td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="6">You have no orders yet.</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <nav class="d-flex justify-content-center mt-4">
+        <ul class="pagination">
+            {% if orders.has_previous %}
+            <li class="page-item">
+                <a class="page-link" href="?page=1">First</a>
+            </li>
+            <li class="page-item">
+                <a class="page-link" href="?page={{ orders.previous_page_number }}">Previous</a>
+            </li>
+            {% endif %}
+
+            {% for num in orders.paginator.page_range %}
+                {% if num == orders.number %}
+                    <li class="page-item active">
+                        <span class="page-link">{{ num }}</span>
+                    </li>
+                {% elif num >= orders.number|add:'-2' and num <= orders.number|add:'2' %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ num }}">{{ num }}</a>
+                    </li>
+                {% endif %}
+            {% endfor %}
+
+            {% if orders.has_next %}
+            <li class="page-item">
+                <a class="page-link" href="?page={{ orders.next_page_number }}">Next</a>
+            </li>
+            <li class="page-item">
+                <a class="page-link" href="?page={{ orders.paginator.num_pages }}">Last</a>
+            </li>
+            {% endif %}
+        </ul>
+    </nav>
+</div>
+{% endblock %}

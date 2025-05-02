@@ -12,24 +12,28 @@ class RegistrationForm(UserCreationForm):
 
     class Meta:
         model = User
-        fields = ['username', 'name', 'email', 'password1', 'password2']
+        fields = ['username', 'password1', 'password2']  
+
+    def clean_email(self):
+        email = self.cleaned_data['email']
+        if User.objects.filter(email=email).exists():
+            raise forms.ValidationError("Email is already registered.")
+        return email
 
     def save(self, commit=True):
         user = super().save(commit=False)
-
         user.first_name = self.cleaned_data['name']
         user.email = self.cleaned_data['email']
 
         if commit:
             user.save()
-
             CustomerProfile.objects.create(
                 user=user,
                 phone_number=self.cleaned_data.get('phone_number', ''),
                 address=self.cleaned_data.get('address', '')
             )
         return user
-
+    
 class OrderCreateForm(forms.ModelForm):
     PAYMENT_METHOD_CHOICES = (
         ('TNG E-wallet', 'TNG E-wallet'),

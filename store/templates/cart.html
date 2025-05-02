@@ -77,20 +77,6 @@
 
 {% block scripts %}
 	<script type="text/javascript">
-
-	$(document).ready(function(){
-		summary();
- 
-	}); 
-	function summary(){
-		$.ajax({
-			url : "summary",
-			type : "GET",
-			success : function(data){
-				$("#abc").html(data);
-			}
-		})
-	}
 	function updateCartItem(obj,id){
 		$.ajax({
 			url: "../update/"+id+"/"+obj.value,

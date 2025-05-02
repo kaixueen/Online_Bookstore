@@ -1,0 +1,23 @@
+{% extends 'base.html' %}
+{% block container %}
+<div class="container">
+  <h2>Checkout</h2>
+  <h4>Shipping Information</h4>
+  <p><strong>Name:</strong> {{ request.user.get_full_name|default:request.user.username }}</p>
+  <p><strong>Address:</strong> {{ customer_profile.address }}</p>
+  <p><strong>Phone:</strong> {{ customer_profile.phone_number }}</p>
+
+  <h4>Order Summary</h4>
+  <ul>
+    {% for item in cart_items %}
+      <li>{{ item.book.name }} (x{{ item.quantity }}) - RM {{ item.subtotal }}</li>
+    {% endfor %}
+  </ul>
+  <p><strong>Total:</strong> RM {{ total_price }}</p>
+
+  <form method="post">
+    {% csrf_token %}
+    <button class="btn btn-success" type="submit">Proceed to Payment</button>
+  </form>
+</div>
+{% endblock %}

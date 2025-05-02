@@ -1,15 +1,17 @@
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth import authenticate, login, logout
 from django.contrib import messages
+from django.contrib.auth.decorators import login_required
 from django.core.paginator import Paginator
 from django.db.models import Q
 from django.views import View
 from django.http import HttpResponse, Http404, JsonResponse
-
-from .models import Book, Slider, CustomerProfile, Order
+from decimal import Decimal
+from .models import Book, Slider, CustomerProfile, Order, Payment
 from .forms import RegistrationForm, OrderCreateForm
 from .cart import Cart
 from .utils import renderPdf
+import uuid
 
 def index(request):
     newpublished = Book.objects.order_by('-created_at')[:4]
@@ -41,7 +43,7 @@ def signin(request):
 
         return render(request, "login.html")
 
-
+@login_required
 def signout(request):
     logout(request)
     return redirect('store:index') 
@@ -54,10 +56,6 @@ def registration(request):
         return redirect('store:signin')
 
     return render(request, 'signup.html', {"form": form})
-
-
-def payment(request):
-    return render(request, 'payment.html')
 
 
 def get_book(request, id):
@@ -108,16 +106,18 @@ def search(request):
     }
     return render(request, 'category.html', context) 
 
-
 def cart_add(request, bookid):
-    cart = Cart(request)  
-    book = get_object_or_404(Book, id=bookid) 
+    if not request.user.is_authenticated:
+        return JsonResponse({'login_required': True}, status=401)
+
+    cart = Cart(request)
+    book = get_object_or_404(Book, id=bookid)
     cart.add(book=book)
 
-    total_items = len(cart)  
+    total_items = len(cart)
     return JsonResponse({'success': True, 'total_items': total_items})
 
-
+@login_required(login_url='store:signin')
 def cart_update(request, bookid, quantity):
     cart = Cart(request) 
     book = get_object_or_404(Book, id=bookid) 
@@ -127,23 +127,23 @@ def cart_update(request, bookid, quantity):
 
     return JsonResponse({'success': True, 'price': price, 'quantity': quantity})
 
-
+@login_required(login_url='store:signin')
 def cart_remove(request, bookid):
     cart = Cart(request)
     book = get_object_or_404(Book, id=bookid)
     cart.remove(book)
     return render(request, 'cart.html', {"cart": cart})
 
-
+@login_required(login_url='store:signin')
 def total_cart(request):
     cart = Cart(request)
     return render(request, 'totalcart.html', {"cart": cart})
 
-
+@login_required(login_url='store:signin')
 def cart_summary(request):
     return render(request, 'summary.html')
 
-
+@login_required(login_url='store:signin')
 def cart_details(request):
     cart = Cart(request)
     context = {
@@ -152,97 +152,168 @@ def cart_details(request):
     return render(request, 'cart.html', context)
 
 
+@login_required(login_url='store:signin')
 def order_create(request):
-    cart = Cart(request)
-    if not request.user.is_authenticated:
-        return redirect('store:signin')
+    cart = request.session.get('cart', {})
+    customer_profile = get_object_or_404(CustomerProfile, user=request.user)
 
-    if len(cart) == 0:
-        return redirect('store:books')
+    if not cart:
+        return redirect('store:cart')  
 
-    try:
-        customer = CustomerProfile.objects.get(user=request.user)
-    except CustomerProfile.DoesNotExist:
-        customer = CustomerProfile.objects.create(user=request.user)
+    cart_items = []
+    total_price = 0
 
-    form = OrderCreateForm(request.POST or None)
+    for book_id, item in cart.items():
+        book = get_object_or_404(Book, id=book_id)
+        quantity = item.get('quantity', 1)
+        price = Decimal(item.get('price', book.price))
+        subtotal = price * quantity
+        total_price += subtotal
+        cart_items.append({'book': book, 'quantity': quantity, 'price': price, 'subtotal': subtotal})
 
     if request.method == 'POST':
-        if form.is_valid():
-            for item in cart:
-                order = form.save(commit=False)
-                order.customer = customer 
-                order.book = item['book']
-                order.price = item['price']
-                order.quantity = item['quantity']
-                order.payable = item['price'] * item['quantity']
-                order.save()
-            cart.clear()
-            messages.success(request, "Your order has been placed successfully.")
-            return render(request, 'order/successfull.html')
-        else:
-            messages.error(request, "Fill out your information correctly.")
+        order = Order.objects.create(customer=customer_profile, books=cart)
+        request.session['order_id'] = order.id
+        request.session.pop('cart', None) 
+        return redirect('store:payment') 
 
-    if request.method != 'POST':
-        form.initial['name'] = request.user.first_name
-        form.initial['email'] = request.user.email
+    return render(request, 'order_create.html', {
+        'cart_items': cart_items,
+        'total_price': total_price,
+        'customer_profile': customer_profile,
+    })
 
-    return render(request, 'order/order.html', {"form": form})
+@login_required(login_url='store:signin')
+def payment(request):
+    order_id = request.session.get('order_id')
+    if not order_id:
+        messages.error(request, "No order found. Please try again.")
+        return redirect('store:order_create')
 
+    order = get_object_or_404(Order, id=order_id)
+    customer_profile = get_object_or_404(CustomerProfile, user=request.user)
 
-def order_list(request):
-    if not request.user.is_authenticated:
-        return redirect('store:signin')
+    if request.method == 'POST':
+        payment_method = request.POST.get('payment_method')
+        account_no = request.POST.get('account_no', '')
+        amount_paid = Decimal(request.POST.get('amount_paid', '0'))
 
-    try:
-        customer_profile = CustomerProfile.objects.get(user=request.user)
-        my_order = Order.objects.filter(customer=customer_profile).order_by('-created')
-        paginator = Paginator(my_order, 5)
-        page = request.GET.get('page')
-        myorder = paginator.get_page(page)
-        
-        return render(request, 'order/list.html', {"myorder": myorder})
-    except CustomerProfile.DoesNotExist:
-        messages.error(request, "You don't have a customer profile yet.")
+        if payment_method == 'cash_on_delivery':
+            order.paid = False
+            order.save()
+            return redirect('store:order_success', order_id=order_id, payment_id=0)
+
+        transaction_id = str(uuid.uuid4())
+
+        payment = Payment.objects.create(
+            order=order,
+            payment_method=payment_method,
+            account_no=account_no,
+            transaction_id=transaction_id,
+            amount_paid=amount_paid
+        )
+
+        order.paid = True
+        order.save()
+        request.session.pop('order_id', None) 
+        return redirect('store:order_success', order_id=order_id, payment_id=payment.id)
+
+    return render(request, 'payment.html', {
+        'order': order,
+        'customer_profile': customer_profile
+    })
+
+@login_required(login_url='store:signin')
+def order_success(request, order_id, payment_id):
+    order = get_object_or_404(Order, id=order_id)
+    customer_profile = get_object_or_404(CustomerProfile, user=request.user)
+    books = []
+    for id, details in order.books.items():
+        book = get_object_or_404(Book, id=id)
+        books.append({'name': book.name, 'quantity': details['quantity']})
+
+    if order.customer != customer_profile:
         return redirect('store:index')
 
-
-def order_details(request, id):
-    if not request.user.is_authenticated:
-        return redirect('store:signin')
-
-    order_summary = get_object_or_404(Order, id=id)
-
-    try:
-        customer_profile = CustomerProfile.objects.get(user=request.user)
-        if order_summary.customer != customer_profile:
-            return redirect('store:index')
-    except CustomerProfile.DoesNotExist:
-        return redirect('store:index')
-
-    context = {
-        "order": order_summary
-    }
-    return render(request, 'order/details.html', context)
-
-
-class pdf(View):  
-    def get(self, request, id):
+    payment = None
+    if payment_id and int(payment_id) != 0:
         try:
-            query = get_object_or_404(Order, id=id)
-            
-            try:
-                customer_profile = CustomerProfile.objects.get(user=request.user)
-                if query.customer != customer_profile:
-                    raise Http404('Content not found')
-            except CustomerProfile.DoesNotExist:
-                raise Http404('Content not found')
-                
-        except Http404:
-            raise Http404('Content not found')
-        
-        context = {
-            "order": query
-        }
-        article_pdf = renderPdf('order/pdf.html', context)
-        return HttpResponse(article_pdf, content_type='application/pdf')
+            payment = Payment.objects.get(id=payment_id, order=order)
+        except Payment.DoesNotExist:
+            pass
+
+    return render(request, 'order_success.html', {
+        'order': order,
+        'books': books,
+        'payment': payment
+    })
+
+
+@login_required(login_url='store:signin')
+def order_list(request):
+    customer_profile = get_object_or_404(CustomerProfile, user=request.user)
+    orders = Order.objects.filter(customer=customer_profile).order_by('-created')
+
+    order_list = []
+    for order in orders:
+        quantity = sum(details['quantity'] for details in order.books.values())
+        order_list.append({'order': order, 'quantity': quantity})
+
+    paginator = Paginator(order_list, 5) 
+    page_number = request.GET.get('page')
+    paginated_order_list = paginator.get_page(page_number)
+
+    return render(request, 'order_list.html', {'orders': paginated_order_list})
+
+@login_required(login_url='store:signin')
+def order_details(request, id):
+    order = get_object_or_404(Order, id=id)
+    customer_profile = get_object_or_404(CustomerProfile, user=request.user)
+
+    if order.customer != customer_profile:
+        return redirect('store:index')
+    
+    books = []
+    for id, details in order.books.items():
+        book = get_object_or_404(Book, id=id)
+        details['subtotal'] = Decimal(book.price) * details['quantity']  
+        books.append((book, details))
+
+    if order.paid:
+        payment = Payment.objects.filter(order=order).first()
+    else:
+        payment = None
+    total_price = order.get_cost()
+
+    return render(request, 'order_details.html', {
+        'order': order,
+        'books': books,
+        'payment': payment,
+        'total_price': total_price,
+    })
+
+
+class pdf(View):
+    @login_required(login_url='store:signin')
+    def get(self, request, id):
+        order = get_object_or_404(Order, id=id)
+
+        try:
+            customer_profile = CustomerProfile.objects.get(user=request.user)
+            if order.customer != customer_profile:
+                raise Http404("Content not found")
+        except CustomerProfile.DoesNotExist:
+            raise Http404("Content not found")
+
+        books = []
+        for id, details in order.books.items():
+            book = get_object_or_404(Book, id=id)
+            books.append((book.name, details['quantity'], book.price, details['quantity'] * book.price))
+
+        context = {"order": order, "books": books}
+        article_pdf = renderPdf('pdf.html', context)
+
+        response = HttpResponse(article_pdf, content_type='application/pdf')
+        filename = f"Order_Receipt_{order.id}.pdf"
+        response['Content-Disposition'] = f'attachment; filename="{filename}"'
+        return response
