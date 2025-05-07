@@ -1,0 +1,10 @@
+{% extends 'base.html' %}
+{% block container %}
+<h2>Add New Book</h2>
+<form method="post" enctype="multipart/form-data">
+    {% csrf_token %}
+    {{ form.as_p }}
+    <button type="submit">Save</button>
+</form>
+<a href="{% url 'store:view_books' %}">⬅ Back to Books List</a>
+{% endblock %}

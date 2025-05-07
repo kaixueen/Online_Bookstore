@@ -1,0 +1,44 @@
+{% extends 'base.html' %}
+{% block container %}
+<div class="container mt-4">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h3>Books in Store</h3>
+        <a href="{% url 'store:add_book' %}" class="btn btn-success">+ Add New Book</a>
+    </div>
+
+    <div class="table-responsive">
+        <table class="table table-bordered table-hover text-center">
+            <thead class="thead-dark">
+                <tr>
+                    <th>#</th>
+                    <th>Name</th>
+                    <th>Writer</th>
+                    <th>Price (RM)</th>
+                    <th>Items Sold</th>
+                    <th>Category</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for book in books %}
+                <tr>
+                    <td>{{ forloop.counter }}</td>
+                    <td>{{ book.name }}</td>
+                    <td>{{ book.writer }}</td>
+                    <td>{{ book.price|floatformat:2 }}</td>
+                    <td>{{ book.items_sold }}</td>
+                    <td>{{ book.category }}</td>
+                    <td>
+                        <a href="{% url 'store:delete_book' book.id %}" onclick="return confirm('Delete this book?');" class="btn btn-sm btn-danger">🗑 Delete</a>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="7">No books available.</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

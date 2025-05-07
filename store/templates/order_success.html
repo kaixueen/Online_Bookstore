@@ -42,7 +42,7 @@
                 </div>
 
                 <div class="mt-4">
-                    <a href="{% url 'store:pdf' id=order.id %}" class="btn btn-outline-primary">
+                    <a href="{% url 'store:get_pdf' id=order.id %}" class="btn btn-outline-primary">
                         <i class="fa fa-download mr-1" aria-hidden="true"></i> Download Receipt
                     </a>
                     <a href="{% url 'store:index' %}" class="btn btn-primary ml-2">Back to Home</a>

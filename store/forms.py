@@ -2,7 +2,7 @@ from django import forms
 from crispy_forms.helper import FormHelper
 from django.contrib.auth.models import User
 from django.contrib.auth.forms import UserCreationForm
-from .models import Order, CustomerProfile
+from .models import Order, CustomerProfile, Book
 
 class RegistrationForm(UserCreationForm):
     name = forms.CharField(required=True, max_length=150, label="Full Name")
@@ -79,3 +79,8 @@ class OrderCreateForm(forms.ModelForm):
         if len(transaction_id.strip()) < 5:
             raise forms.ValidationError("Transaction ID must be at least 5 characters long.")
         return transaction_id
+
+class BookForm(forms.ModelForm):
+    class Meta:
+        model = Book
+        fields = ['name', 'writer', 'category', 'price', 'items_sold', 'description', 'coverpage', 'status']

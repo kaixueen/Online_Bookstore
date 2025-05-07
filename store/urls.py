@@ -25,5 +25,10 @@ urlpatterns = [
     path('order_details/<int:id>/', views.order_details, name='order_details'),
     path('payment/', views.payment, name='payment'),
     path('order_success/<int:order_id>/<int:payment_id>', views.order_success, name='order_success'),
-	path('pdf/<int:id>',views.pdf.as_view(), name="pdf"),
+	path('pdf/<int:id>/', views.get_pdf, name='get_pdf'),
+    path('seller/orders/', views.handle_orders, name='handle_orders'),
+    path('seller/orders/update/<int:order_id>/', views.update_order_status, name='update_order_status'),
+    path('seller/books/', views.view_books, name='view_books'),
+    path('seller/books/add/', views.add_book, name='add_book'),
+    path('seller/books/delete/<int:book_id>/', views.delete_book, name='delete_book'),
 ]

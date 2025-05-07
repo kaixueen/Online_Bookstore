@@ -1,0 +1,68 @@
+{% extends 'base.html' %}
+{% block container %}
+<div class="container mt-4">
+    <h3 class="mb-4 text-center">Customer Orders</h3>
+
+    <div class="table-responsive">
+        <table class="table table-bordered table-hover text-center">
+            <thead class="thead-dark">
+                <tr>
+                    <th>#</th>
+                    <th>Order ID</th>
+                    <th>Customer</th>
+                    <th>Status</th>
+                    <th>Total Cost (RM)</th>
+                    <th>Payment Method</th>
+                    <th>Paid</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for order in orders %}
+                <form method="POST" action="{% url 'store:update_order_status' order.id %}">
+                    {% csrf_token %}
+                    <tr>
+                        <td>{{ forloop.counter }}</td>
+                        <td>{{ order.id }}</td>
+                        <td>{{ order.customer.user.username }}</td>
+
+                        <td>
+                            <select name="status" class="form-select">
+                                <option value="processing" {% if order.status == 'processing' %}selected{% endif %}>Processing</option>
+                                <option value="success" {% if order.status == 'success' %}selected{% endif %}>Success</option>
+                                <option value="failed" {% if order.status == 'failed' %}selected{% endif %}>Failed</option>
+                            </select>
+                        </td>
+
+                        <td>{{ order.get_cost|floatformat:2 }}</td>
+
+                        <td>
+                            {% for payment in payments %}
+                                {% if payment.order.id == order.id %}
+                                    {{ payment.payment_method }}
+                                {% endif %}
+                            {% endfor %}
+                        </td>
+
+                        <td>
+                            <select name="paid" class="form-select">
+                                <option value="False" {% if not order.paid %}selected{% endif %}>Unpaid</option>
+                                <option value="True" {% if order.paid %}selected{% endif %}>Paid</option>
+                            </select>
+                        </td>
+
+                        <td>
+                            <button type="submit" class="btn btn-primary btn-sm">Update</button>
+                        </td>
+                    </tr>
+                </form>
+                {% empty %}
+                <tr>
+                    <td colspan="8">No orders available.</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}
