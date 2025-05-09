@@ -6,7 +6,7 @@ from django.contrib.auth.models import User
 from decimal import Decimal
 
 class CustomerProfile(models.Model):
-    user = models.OneToOneField(User, on_delete=models.CASCADE)
+    user = models.OneToOneField(User, on_delete=models.CASCADE, primary_key=True)
     address = models.TextField(blank=True)
     phone_number = models.CharField(max_length=15, blank=True)
 
@@ -71,6 +71,7 @@ class Order(models.Model):
 
 class Payment(models.Model):
     order = models.OneToOneField(Order, on_delete=models.CASCADE)
+    customer = models.ForeignKey(CustomerProfile, on_delete=models.CASCADE)
     payment_method = models.CharField(max_length=20)
     account_no = models.CharField(max_length=20)
     transaction_id = models.CharField(max_length=100)
@@ -87,9 +88,9 @@ class LoginActivityLog(models.Model):
     success = models.BooleanField(default=True)
 
 class PaymentLog(models.Model):
-    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    customer = models.ForeignKey(CustomerProfile, on_delete=models.CASCADE)
     payment_method = models.CharField(max_length=50)
     transaction_id = models.CharField(max_length=100)
     amount = models.DecimalField(max_digits=10, decimal_places=2)
-    status = models.CharField(max_length=20)  # e.g., Success, Failed
+    status = models.CharField(max_length=20)
     created_at = models.DateTimeField(auto_now_add=True)

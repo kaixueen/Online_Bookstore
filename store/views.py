@@ -168,16 +168,21 @@ def cart_details(request):
 @user_passes_test(is_customer)
 def order_create(request):
     cart = request.session.get('cart', {})
+    
     customer_profile = get_object_or_404(CustomerProfile, user=request.user)
 
     if not cart:
-        return redirect('store:cart')  
+        return redirect('store:cart')
 
     cart_items = []
     total_price = 0
 
     for book_id, item in cart.items():
-        book = get_object_or_404(Book, id=book_id)
+        try:
+            book = get_object_or_404(Book, id=book_id)
+        except Exception as e:
+            raise
+
         quantity = item.get('quantity', 1)
         price = Decimal(item.get('price', book.price))
         subtotal = price * quantity
@@ -185,10 +190,16 @@ def order_create(request):
         cart_items.append({'book': book, 'quantity': quantity, 'price': price, 'subtotal': subtotal})
 
     if request.method == 'POST':
-        order = Order.objects.create(customer=customer_profile, books=cart)
+        try:
+            order = Order.objects.create(customer=customer_profile, books=cart)
+            print(f"Order created successfully: {order}")
+        except Exception as e:
+            print(f"Failed to create order: {e}")
+            raise
+
         request.session['order_id'] = order.id
-        request.session.pop('cart', None) 
-        return redirect('store:payment') 
+        request.session.pop('cart', None)
+        return redirect('store:payment')
 
     return render(request, 'order_create.html', {
         'cart_items': cart_items,
@@ -196,49 +207,77 @@ def order_create(request):
         'customer_profile': customer_profile,
     })
 
+
 @login_required(login_url='store:signin')
 @user_passes_test(is_customer)
 def payment(request):
     order_id = request.session.get('order_id')
+
     if not order_id:
+        print("No order ID found in session. Redirecting back.")
         messages.error(request, "No order found. Please try again.")
         return redirect('store:order_create')
 
-    order = get_object_or_404(Order, id=order_id)
+    try:
+        order = get_object_or_404(Order, id=order_id)
+        print(f"Order loaded: {order}")
+    except Exception as e:
+        print(f"Failed to retrieve order with ID {order_id}: {e}")
+        raise
+
     customer_profile = get_object_or_404(CustomerProfile, user=request.user)
+    print(f"Customer profile: {customer_profile}")
 
     if request.method == 'POST':
         payment_method = request.POST.get('payment_method')
         account_no = request.POST.get('account_no', '')
-        amount_paid = Decimal(request.POST.get('amount_paid', '0'))
+        amount_paid = request.POST.get('amount_paid', '0')
+
+        print(f"Payment method: {payment_method}, account_no: {account_no}, amount_paid: {amount_paid}")
+
+        try:
+            amount_paid = Decimal(amount_paid)
+        except Exception as e:
+            messages.error(request, "Invalid amount.")
+            return redirect('store:payment')
+
         transaction_id = str(uuid.uuid4())
 
-        payment = Payment.objects.create(
-            order=order,
-            payment_method=payment_method,
-            account_no=account_no if payment_method != 'cash_on_delivery' else '',
-            transaction_id=transaction_id,
-            amount_paid=amount_paid
-        )
+        try:
+            payment = Payment.objects.create(
+                order=order,
+                customer=customer_profile,
+                payment_method=payment_method,
+                account_no=account_no if payment_method != 'cash_on_delivery' else '',
+                transaction_id=transaction_id,
+                amount_paid=amount_paid
+            )
+        except Exception as e:
+            raise
 
-        PaymentLog.objects.create(
-            user=request.user,
-            payment_method=payment_method,
-            transaction_id=transaction_id,
-            amount=amount_paid,
-            status='Success',
-        )
+        try:
+            PaymentLog.objects.create(
+                customer=customer_profile,
+                payment_method=payment_method,
+                transaction_id=transaction_id,
+                amount=amount_paid,
+                status='Success',
+            )
+        except Exception as e:
+            raise
 
         order.paid = (payment_method != 'cash_on_delivery')
         order.save()
 
         request.session.pop('order_id', None)
+
         return redirect('store:order_success', order_id=order_id, payment_id=payment.id)
 
     return render(request, 'payment.html', {
         'order': order,
         'customer_profile': customer_profile
     })
+
 
 
 @login_required(login_url='store:signin')
