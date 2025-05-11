@@ -15,6 +15,15 @@
 </div>
 {% include 'partials/header.html' %}
 
+<div class="messages">
+	{% with messages|slice:"-1:" as last_message %}
+		{% for message in last_message %}
+	  		<p>{{ message }}</p>
+		{% endfor %}
+  	{% endwith %}
+</div>
+
+
 {% block headermenu %} {% endblock %}
 
 <div class="container-fluid">

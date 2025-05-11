@@ -10,7 +10,13 @@
 <body class="login-body">
 	<div class="login-wrapper">
 		<div class="signup-form form">
-			<div class="messages"></div>	
+			<div class="messages">
+				{% with messages|slice:"-1:" as last_message %}
+  					{% for message in last_message %}
+    					<p>{{ message }}</p>
+  					{% endfor %}
+				{% endwith %}
+			</div>	
 			<h3>Create Account</h3>	
 			<form action="" method="POST" class="auth-validate-form">
 				{% csrf_token %}

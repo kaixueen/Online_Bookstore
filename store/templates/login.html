@@ -10,13 +10,14 @@
 <body class="login-body">
 	<div class="login-wrapper">
 		<div class="signin-form form">
-			{% if messages %}
 			<div class="messages">
-			    {% for message in messages %}
-			    <p{% if message.tags %} class="{{ message.tags }}"{% endif %}>{{ message }}</p>
-			    {% endfor %}
+				{% with messages|slice:"-1:" as last_message %}
+  					{% for message in last_message %}
+						<p>{{ message }}</p>
+  					{% endfor %}
+				{% endwith %}
 			</div>
-			{% endif %}
+
 			<h3> Sign In</h3>	
 			<form action="" method="POST" class="auth-validate-form">
 				{% csrf_token %}

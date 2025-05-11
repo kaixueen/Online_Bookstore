@@ -7,6 +7,7 @@ from django.db.models import Q
 from django.views import View
 from django.http import HttpResponse, Http404, JsonResponse
 from decimal import Decimal
+from django.utils.html import escape
 from .models import Book, Slider, CustomerProfile, Order, Payment, PaymentLog
 from .forms import RegistrationForm, BookForm
 from .cart import Cart
@@ -36,18 +37,24 @@ def index(request):
 def signin(request):
     if request.user.is_authenticated:
         return redirect('store:index')
-    else:
-        if request.method == "POST":
-            user = request.POST.get('user')
-            password = request.POST.get('pass')
-            auth = authenticate(request, username=user, password=password)
-            if auth is not None:
-                login(request, auth)
-                return redirect('store:index')
-            else:
-                messages.error(request, 'Username and password don\'t match')
 
-        return render(request, "login.html")
+    if request.method == "POST":
+        user = request.POST.get('user', '').strip()
+        password = request.POST.get('pass', '').strip()
+
+        if not user or not password:
+            messages.error(request, 'Username and password are required.')
+            return redirect('store:signin')
+
+        auth = authenticate(request, username=user, password=password)
+        if auth is not None:
+            login(request, auth)
+            return redirect('store:index')
+        else:
+            messages.error(request, 'Username and password don\'t match')
+
+    return render(request, "login.html")
+
 
 @login_required
 def signout(request):
@@ -56,11 +63,14 @@ def signout(request):
 
 
 def registration(request):
-    form = RegistrationForm(request.POST or None)
-    if form.is_valid():
-        form.save()
-        return redirect('store:signin')
-
+    if request.method == 'POST':
+        form = RegistrationForm(request.POST)
+        if form.is_valid():
+            form.save()
+            return redirect('store:signin')
+    else:
+        form = RegistrationForm()
+        
     return render(request, 'signup.html', {"form": form})
 
 
@@ -93,13 +103,14 @@ def get_book_category(request, category_name):
 
 
 def search(request):
-    search = request.GET.get('q')
+    query = request.GET.get('q', '').strip()
     books = Book.objects.all()
-    if search:
+    if query:
+        query = escape(query) 
         books = books.filter(
-            Q(name__icontains=search) | 
-            Q(category__icontains=search) | 
-            Q(writer__icontains=search)
+            Q(name__icontains=query) |
+            Q(category__icontains=query) |
+            Q(writer__icontains=query)
         )
 
     paginator = Paginator(books, 10)
@@ -108,9 +119,10 @@ def search(request):
 
     context = {
         "book": books,
-        "search": search,
+        "search": query,
     }
-    return render(request, 'category.html', context) 
+    return render(request, 'category.html', context)
+
 
 @user_passes_test(is_customer)
 def cart_add(request, bookid):
@@ -168,7 +180,7 @@ def cart_details(request):
 @user_passes_test(is_customer)
 def order_create(request):
     cart = request.session.get('cart', {})
-    
+
     customer_profile = get_object_or_404(CustomerProfile, user=request.user)
 
     if not cart:
@@ -179,11 +191,13 @@ def order_create(request):
 
     for book_id, item in cart.items():
         try:
+            book_id = int(book_id)
             book = get_object_or_404(Book, id=book_id)
-        except Exception as e:
-            raise
+        except (ValueError, Book.DoesNotExist):
+            continue
 
-        quantity = item.get('quantity', 1)
+        quantity = int(item.get('quantity', 1))
+        quantity = max(1, quantity)
         price = Decimal(item.get('price', book.price))
         subtotal = price * quantity
         total_price += subtotal
@@ -192,10 +206,9 @@ def order_create(request):
     if request.method == 'POST':
         try:
             order = Order.objects.create(customer=customer_profile, books=cart)
-            print(f"Order created successfully: {order}")
         except Exception as e:
-            print(f"Failed to create order: {e}")
-            raise
+            messages.error(request, "Unable to create order.")
+            return redirect('store:cart')
 
         request.session['order_id'] = order.id
         request.session.pop('cart', None)
@@ -214,29 +227,28 @@ def payment(request):
     order_id = request.session.get('order_id')
 
     if not order_id:
-        print("No order ID found in session. Redirecting back.")
         messages.error(request, "No order found. Please try again.")
         return redirect('store:order_create')
 
     try:
+        order_id = int(order_id)
         order = get_object_or_404(Order, id=order_id)
-        print(f"Order loaded: {order}")
-    except Exception as e:
-        print(f"Failed to retrieve order with ID {order_id}: {e}")
-        raise
+    except (ValueError, Order.DoesNotExist) as e:
+        messages.error(request, "Invalid order.")
+        return redirect('store:order_create')
 
     customer_profile = get_object_or_404(CustomerProfile, user=request.user)
-    print(f"Customer profile: {customer_profile}")
 
     if request.method == 'POST':
-        payment_method = request.POST.get('payment_method')
-        account_no = request.POST.get('account_no', '')
-        amount_paid = request.POST.get('amount_paid', '0')
 
-        print(f"Payment method: {payment_method}, account_no: {account_no}, amount_paid: {amount_paid}")
+        payment_method = request.POST.get('payment_method', '').strip()
+        account_no = request.POST.get('account_no', '').strip()
+        amount_paid = order.get_cost()
 
         try:
             amount_paid = Decimal(amount_paid)
+            if amount_paid <= 0:
+                raise ValueError("Amount is zero or negative.")
         except Exception as e:
             messages.error(request, "Invalid amount.")
             return redirect('store:payment')
@@ -252,10 +264,7 @@ def payment(request):
                 transaction_id=transaction_id,
                 amount_paid=amount_paid
             )
-        except Exception as e:
-            raise
 
-        try:
             PaymentLog.objects.create(
                 customer=customer_profile,
                 payment_method=payment_method,
@@ -263,22 +272,22 @@ def payment(request):
                 amount=amount_paid,
                 status='Success',
             )
+
+            order.paid = (payment_method != 'cash_on_delivery')
+            order.save()
+
+            request.session.pop('order_id', None)
+
+            return redirect('store:order_success', order_id=order_id, payment_id=payment.id)
+
         except Exception as e:
-            raise
-
-        order.paid = (payment_method != 'cash_on_delivery')
-        order.save()
-
-        request.session.pop('order_id', None)
-
-        return redirect('store:order_success', order_id=order_id, payment_id=payment.id)
+            messages.error(request, "Payment failed. Try again.")
+            return redirect('store:payment')
 
     return render(request, 'payment.html', {
         'order': order,
         'customer_profile': customer_profile
     })
-
-
 
 @login_required(login_url='store:signin')
 @user_passes_test(is_customer)
