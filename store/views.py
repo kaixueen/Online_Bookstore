@@ -73,6 +73,8 @@ def registration(request):
         
     return render(request, 'signup.html', {"form": form})
 
+def privacy_policy(request):
+    return render(request, 'privacy_policy.html')
 
 def get_book(request, id):
     book = get_object_or_404(Book, id=id)

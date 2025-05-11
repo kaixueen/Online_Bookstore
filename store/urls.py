@@ -11,6 +11,7 @@ urlpatterns = [
     path('login', views.signin, name="signin"),
 	path('logout', views.signout, name="signout"),
 	path('registration', views.registration, name="registration"),
+    path('privacy-policy/', views.privacy_policy, name='privacy_policy'),
 	path('book/<int:id>', views.get_book, name="book"),
 	path('books', views.get_books, name="books"),
 	path('category/<str:category_name>/', views.get_book_category, name="category"),

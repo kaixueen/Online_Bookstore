@@ -34,6 +34,15 @@
 				        {% endfor %}
 				    </div>
 				{% endfor %}
+				<div class="form-group form-check mt-2">
+    				<input type="checkbox" class="form-check-input" id="consent_checkbox" name="consent">
+    				<label class="form-check-label" for="consent_checkbox">
+        				I have read and agree to the <a href="{% url 'store:privacy_policy' %}" target="_blank">Privacy Policy</a>, and I consent to the collection and use of my personal data as described therein.
+    				</label>
+    				{% if form.errors.consent %}
+        				<p style="color: red; font-size: 13px">{{ form.errors.consent }}</p>
+    				{% endif %}
+				</div>
 				<button class="btn btn-default w-100 mt-3">Create your BookStore account</button>
 			</form>
 			<div class="a-divider-break mt-3"></div>

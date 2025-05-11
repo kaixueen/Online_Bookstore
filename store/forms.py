@@ -32,9 +32,17 @@ class RegistrationForm(UserCreationForm):
         label="Address"
     )
 
+    consent = forms.BooleanField(
+        required=True,
+        label="I agree to the Privacy Policy and data usage terms.",
+        error_messages={
+            'required': 'You must agree to the privacy policy to register.'
+        }
+    )
+
     class Meta:
         model = User
-        fields = ['username', 'password1', 'password2']
+        fields = ['username', 'password1', 'password2', 'consent']
 
     def clean_email(self):
         email = self.cleaned_data['email']
