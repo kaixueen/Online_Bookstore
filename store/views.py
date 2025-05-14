@@ -8,8 +8,10 @@ from django.views import View
 from django.http import HttpResponse, Http404, JsonResponse
 from decimal import Decimal
 from django.utils.html import escape
-from .models import Book, Slider, CustomerProfile, Order, Payment, PaymentLog
+from .models import Book, Slider, CustomerProfile, Order, Payment, PaymentLog, User, LoginActivityLog
 from .forms import RegistrationForm, BookForm
+from django.utils import timezone
+from django.utils.timezone import timedelta
 from .cart import Cart
 from .utils import renderPdf
 import uuid
@@ -39,19 +41,34 @@ def signin(request):
         return redirect('store:index')
 
     if request.method == "POST":
-        user = request.POST.get('user', '').strip()
+        username = request.POST.get('user', '').strip()
         password = request.POST.get('pass', '').strip()
 
-        if not user or not password:
+        if not username or not password:
             messages.error(request, 'Username and password are required.')
             return redirect('store:signin')
 
-        auth = authenticate(request, username=user, password=password)
-        if auth is not None:
-            login(request, auth)
+        # Check if user exists
+        user = User.objects.filter(username=username).first()
+        if user:
+            five_minutes_ago = timezone.now() - timedelta(minutes=5)
+            recent_failed_attempts = LoginActivityLog.objects.filter(
+                user=user,
+                success=False,
+                timestamp__gte=five_minutes_ago
+            ).count()
+
+            if recent_failed_attempts >= 3:
+                messages.error(request, 'Account locked due to too many failed login attempts. Try again in 5 minutes.')
+                return redirect('store:signin')
+
+        # Authenticate will trigger `user_logged_in` or `user_login_failed` signal
+        user_auth = authenticate(request, username=username, password=password)
+        if user_auth:
+            login(request, user_auth)
             return redirect('store:index')
         else:
-            messages.error(request, 'Username and password don\'t match')
+            messages.error(request, 'Username and password don\'t match.')
 
     return render(request, "login.html")
 
